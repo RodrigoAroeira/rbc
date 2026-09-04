@@ -6,21 +6,34 @@ mod token;
 
 const OHM: char = '\u{03A9}';
 
+fn eval(line: &str) -> Result<f64> {
+    let tokens = token::tokenize(line)?;
+    parsing::parse_tokens(&tokens)
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args()
         .skip(1)
         .filter(|s| !s.trim().is_empty())
         .collect();
-    let mut buf = String::new();
     if args.is_empty() {
-        print!("> ");
-        io::stdout().flush()?;
-        io::stdin().read_line(&mut buf)?;
+        let stdin = io::stdin();
+        loop {
+            print!("> ");
+            io::stdout().flush()?;
+            let mut buf = String::new();
+            if stdin.read_line(&mut buf)? == 0 {
+                println!();
+                break;
+            }
+            match eval(&buf) {
+                Ok(ans) => println!("{ans} {OHM}"),
+                Err(e) => println!("error: {e}"),
+            }
+        }
     } else {
-        buf = args.iter().as_ref().join(" ");
+        let buf = args.join(" ");
+        println!("{} {OHM}", eval(&buf)?);
     }
-    let tokens = token::tokenize(&buf)?;
-    let ans = parsing::parse_tokens(&tokens)?;
-    println!("{ans} {OHM}");
     Ok(())
 }
