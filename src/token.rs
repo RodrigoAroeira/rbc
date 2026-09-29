@@ -1,3 +1,5 @@
+use anyhow::{Result, anyhow, bail};
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Paren {
     L,
@@ -11,8 +13,6 @@ pub enum Token {
     Series,
     Paren(Paren),
 }
-
-use anyhow::{Result, anyhow, bail};
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>> {
     let mut chars = input.char_indices().peekable();
