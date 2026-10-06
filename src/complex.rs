@@ -117,11 +117,11 @@ impl fmt::Display for Complex {
         // Drop a zero part rather than printing `0+3i` or `4+0i`.
         match (self.re == 0.0, self.im == 0.0) {
             (true, true) => write!(f, "0"),
-            (true, false) => write!(f, "{}j", self.im),
+            (true, false) => write!(f, "{}i", self.im),
             (false, true) => write!(f, "{}", self.re),
             (false, false) => {
                 write!(f, "{}{}", self.re, if self.im < 0.0 { "-" } else { "+" })?;
-                write!(f, "{}j", self.im.abs())
+                write!(f, "{}i", self.im.abs())
             }
         }
     }
