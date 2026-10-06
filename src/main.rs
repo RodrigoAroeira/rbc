@@ -1,12 +1,15 @@
 use anyhow::Result;
 use std::io::{self, Write};
 
+mod complex;
 mod parsing;
 mod token;
 
+use complex::Complex;
+
 const OHM: char = '\u{03A9}';
 
-fn eval(line: &str) -> Result<f64> {
+fn eval(line: &str) -> Result<Complex> {
     let tokens = token::tokenize(line)?;
     parsing::parse_tokens(&tokens)
 }

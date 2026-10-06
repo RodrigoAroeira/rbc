@@ -1,7 +1,9 @@
+use crate::complex::Complex;
 use crate::token::{Paren, Token};
+
 use anyhow::{Result, bail};
 
-pub fn parse_tokens(tokens: &[Token]) -> Result<f64> {
+pub fn parse_tokens(tokens: &[Token]) -> Result<Complex> {
     if tokens.is_empty() {
         bail!("expected an expression");
     }
@@ -13,7 +15,7 @@ pub fn parse_tokens(tokens: &[Token]) -> Result<f64> {
     Ok(value)
 }
 
-fn parse_expr(tokens: &[Token], i: &mut usize) -> Result<f64> {
+fn parse_expr(tokens: &[Token], i: &mut usize) -> Result<Complex> {
     let mut value = parse_term(tokens, i)?;
     loop {
         match tokens.get(*i) {
@@ -31,7 +33,7 @@ fn parse_expr(tokens: &[Token], i: &mut usize) -> Result<f64> {
     }
 }
 
-fn parse_term(tokens: &[Token], i: &mut usize) -> Result<f64> {
+fn parse_term(tokens: &[Token], i: &mut usize) -> Result<Complex> {
     match tokens.get(*i) {
         Some(&Token::Number(n)) => {
             *i += 1;
@@ -51,11 +53,11 @@ fn parse_term(tokens: &[Token], i: &mut usize) -> Result<f64> {
     }
 }
 
-fn parallel(a: f64, b: f64) -> f64 {
-    if a == 0.0 || b == 0.0 {
-        0.0
+fn parallel(a: Complex, b: Complex) -> Complex {
+    if a.is_zero() || b.is_zero() {
+        Complex::ZERO
     } else {
-        1.0 / (1.0 / a + 1.0 / b)
+        Complex::ONE / (a.recip() + b.recip())
     }
 }
 
@@ -64,11 +66,12 @@ mod test {
     use super::*;
     use crate::token::tokenize;
 
-    fn parse(s: &str) -> Result<f64> {
+    fn parse(s: &str) -> Result<Complex> {
         parse_tokens(&tokenize(s)?)
     }
 
-    fn assert_res(actual: Result<f64>, expected: f64) {
+    fn assert_res(actual: Result<Complex>, expected: impl Into<Complex>) {
+        let expected = expected.into();
         match actual {
             Ok(v) => assert!((v - expected).abs() < 1e-9, "expected {expected}, got {v}"),
             Err(e) => panic!("parse error: {e}"),
@@ -109,6 +112,19 @@ mod test {
         assert_res(parse("4 // (3 + 5)"), 4.0 * 8.0 / 12.0);
         assert_res(parse("((2))"), 2.0);
         assert_res(parse("(4 // 3) // 2"), 12.0 / 13.0);
+    }
+
+    #[test]
+    fn test_imaginary() {
+        // pure imaginary literals flow through both operators
+        assert_res(parse("3j"), Complex::new(0.0, 3.0));
+        assert_res(parse("i"), Complex::new(0.0, 1.0));
+        assert_res(parse("3j + 4"), Complex::new(4.0, 3.0));
+        // parallel of 4 and 3j is 1/(1/4 + 1/(3j))
+        assert_res(
+            parse("4 // 3j"),
+            Complex::ONE / (Complex::from(4.0).recip() + Complex::new(0.0, 3.0).recip()),
+        );
     }
 
     #[test]
