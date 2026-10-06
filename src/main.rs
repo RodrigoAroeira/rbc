@@ -1,5 +1,6 @@
 use anyhow::Result;
-use std::io::{self, Write};
+use rustyline::DefaultEditor;
+use rustyline::error::ReadlineError;
 
 mod complex;
 mod parsing;
@@ -20,18 +21,31 @@ fn main() -> Result<()> {
         .filter(|s| !s.trim().is_empty())
         .collect();
     if args.is_empty() {
-        let stdin = io::stdin();
+        let mut rl = DefaultEditor::new()?;
         loop {
-            print!("> ");
-            io::stdout().flush()?;
-            let mut buf = String::new();
-            if stdin.read_line(&mut buf)? == 0 {
-                println!();
-                break;
-            }
-            match eval(&buf) {
-                Ok(ans) => println!("{ans} {OHM}"),
-                Err(e) => println!("error: {e}"),
+            let readline = rl.readline("> ");
+            match readline {
+                Ok(line) => {
+                    let trimmed = line.trim();
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+                    match eval(trimmed) {
+                        Ok(ans) => println!("{ans} {OHM}"),
+                        Err(e) => println!("error: {e}"),
+                    }
+                }
+                Err(ReadlineError::Interrupted) => {
+                    println!("^C");
+                    continue;
+                }
+                Err(ReadlineError::Eof) => {
+                    break;
+                }
+                Err(err) => {
+                    println!("error: {err}");
+                    break;
+                }
             }
         }
     } else {
