@@ -63,51 +63,53 @@ fn main() -> Result<()> {
         .skip(1)
         .filter(|s| !s.trim().is_empty())
         .collect();
-    if args.is_empty() {
-        let mut rl = Editor::<RbcHelper, DefaultHistory>::new()?;
-        rl.set_helper(Some(RbcHelper));
-        let history_path = get_history_path();
-        if let Some(ref path) = history_path {
-            _ = rl.load_history(path);
-        }
 
-        loop {
-            let readline = rl.readline("> ");
-            match readline {
-                Ok(line) => {
-                    let trimmed = line.trim();
-                    if trimmed.is_empty() {
-                        continue;
-                    }
-                    _ = rl.add_history_entry(trimmed);
-                    match eval(trimmed) {
-                        Ok(ans) => println!("{ans} {OHM}"),
-                        Err(e) => println!("error: {e}"),
-                    }
-                }
-                Err(ReadlineError::Interrupted) => {
-                    println!("^C");
-                    continue;
-                }
-                Err(ReadlineError::Eof) => {
-                    break;
-                }
-                Err(err) => {
-                    println!("error: {err}");
-                    break;
-                }
-            }
-        }
-
-        if let Some(ref path) = history_path {
-            if let Some(parent) = path.parent() {
-                _ = std::fs::create_dir_all(parent);
-            }
-            _ = rl.save_history(path);
-        }
-    } else {
+    if !args.is_empty() {
         let buf = args.join(" ");
         println!("{} {OHM}", eval(&buf)?);
+        return Ok(());
+    }
+
+    let mut rl = Editor::<RbcHelper, DefaultHistory>::new()?;
+    rl.set_helper(Some(RbcHelper));
+    let history_path = get_history_path();
+    if let Some(ref path) = history_path {
+        _ = rl.load_history(path);
+    }
+
+    loop {
+        let readline = rl.readline("> ");
+        match readline {
+            Ok(line) => {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                _ = rl.add_history_entry(trimmed);
+                match eval(trimmed) {
+                    Ok(ans) => println!("{ans} {OHM}"),
+                    Err(e) => println!("error: {e}"),
+                }
+            }
+            Err(ReadlineError::Interrupted) => {
+                println!("^C");
+                continue;
+            }
+            Err(ReadlineError::Eof) => {
+                break;
+            }
+            Err(err) => {
+                println!("error: {err}");
+                break;
+            }
+        }
+    }
+
+    if let Some(ref path) = history_path {
+        if let Some(parent) = path.parent() {
+            _ = std::fs::create_dir_all(parent);
+        }
+        _ = rl.save_history(path);
     }
     Ok(())
 }
