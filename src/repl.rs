@@ -4,7 +4,7 @@ use anyhow::Result;
 use rustyline::completion::Completer;
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
-use rustyline::hint::Hinter;
+use rustyline::hint::{Hint, Hinter};
 use rustyline::history::DefaultHistory;
 use rustyline::validate::Validator;
 use rustyline::{Editor, Helper};
@@ -20,13 +20,24 @@ fn get_history_path() -> Option<PathBuf> {
 
 #[derive(Default)]
 struct RbcHelper;
+struct PreviewHint(String);
+
+impl Hint for PreviewHint {
+    fn display(&self) -> &str {
+        &self.0
+    }
+
+    fn completion(&self) -> Option<&str> {
+        None
+    }
+}
 
 impl Completer for RbcHelper {
     type Candidate = String;
 }
 
 impl Hinter for RbcHelper {
-    type Hint = String;
+    type Hint = PreviewHint;
 
     fn hint(&self, line: &str, pos: usize, _ctx: &rustyline::Context<'_>) -> Option<Self::Hint> {
         if pos < line.len() {
@@ -36,7 +47,10 @@ impl Hinter for RbcHelper {
         if trimmed.is_empty() {
             return None;
         }
-        eval(trimmed).ok().map(|ans| format!("\n{ans} {OHM}"))
+        eval(trimmed)
+            .ok()
+            .map(|ans| format!("\n{ans} {OHM}"))
+            .map(PreviewHint)
     }
 }
 
