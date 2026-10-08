@@ -3,7 +3,7 @@ use crate::token::{Paren, Token};
 
 use anyhow::{Result, bail};
 
-pub fn parse_tokens(tokens: &[Token]) -> Result<Complex> {
+fn parse_tokens(tokens: &[Token]) -> Result<Complex> {
     if tokens.is_empty() {
         bail!("expected an expression");
     }
@@ -59,6 +59,11 @@ fn parallel(a: Complex, b: Complex) -> Complex {
     } else {
         Complex::ONE / (a.recip() + b.recip())
     }
+}
+
+pub fn eval(line: &str) -> Result<Complex> {
+    let tokens = crate::token::tokenize(line)?;
+    parse_tokens(&tokens)
 }
 
 #[cfg(test)]
