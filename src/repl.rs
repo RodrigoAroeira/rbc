@@ -39,10 +39,7 @@ impl Completer for RbcHelper {
 impl Hinter for RbcHelper {
     type Hint = PreviewHint;
 
-    fn hint(&self, line: &str, pos: usize, _ctx: &rustyline::Context<'_>) -> Option<Self::Hint> {
-        if pos < line.len() {
-            return None;
-        }
+    fn hint(&self, line: &str, _pos: usize, _ctx: &rustyline::Context<'_>) -> Option<Self::Hint> {
         let trimmed = line.trim();
         if trimmed.is_empty() {
             return None;
