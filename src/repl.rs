@@ -1,4 +1,5 @@
-use crate::parsing::eval;
+use crate::complex::Complex;
+use crate::parsing::{eval, eval_readonly};
 
 use anyhow::Result;
 use rustyline::completion::Completer;
@@ -10,6 +11,7 @@ use rustyline::validate::Validator;
 use rustyline::{Editor, Helper};
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 pub const OHM: char = '\u{03A9}';
@@ -19,7 +21,9 @@ fn get_history_path() -> Option<PathBuf> {
 }
 
 #[derive(Default)]
-struct RbcHelper;
+struct RbcHelper {
+    vars: HashMap<String, Complex>,
+}
 struct PreviewHint(String);
 
 impl Hint for PreviewHint {
@@ -44,7 +48,7 @@ impl Hinter for RbcHelper {
         if trimmed.is_empty() {
             return None;
         }
-        eval(trimmed)
+        eval_readonly(trimmed, &self.vars)
             .ok()
             .map(|ans| format!("\n{ans} {OHM}"))
             .map(PreviewHint)
@@ -63,7 +67,7 @@ impl Helper for RbcHelper {}
 
 fn get_editor() -> Result<Editor<RbcHelper, DefaultHistory>> {
     let mut rl = Editor::<RbcHelper, DefaultHistory>::new()?;
-    rl.set_helper(Some(RbcHelper));
+    rl.set_helper(Some(RbcHelper::default()));
     let history_path = get_history_path();
     if let Some(ref path) = history_path {
         _ = rl.load_history(path);
@@ -81,7 +85,11 @@ pub fn run() -> Result<()> {
                     continue;
                 }
                 _ = rl.add_history_entry(trimmed);
-                match eval(trimmed) {
+                let result = {
+                    let vars = &mut rl.helper_mut().expect("helper is set").vars;
+                    eval(trimmed, Some(vars))
+                };
+                match result {
                     Ok(ans) => println!("{ans} {OHM}"),
                     Err(e) => println!("error: {e}"),
                 }

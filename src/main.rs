@@ -13,7 +13,7 @@ fn main() -> Result<()> {
 
     if !args.is_empty() {
         let buf = args.join(" ");
-        println!("{} {}", parsing::eval(&buf)?, repl::OHM);
+        println!("{} {}", parsing::eval(&buf, None)?, repl::OHM);
         return Ok(());
     }
 
