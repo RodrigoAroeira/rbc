@@ -9,14 +9,16 @@ pub enum Paren {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Token {
+pub enum Token<'a> {
     Number(Complex),
+    Ident(&'a str),
+    Assign,
     Parallel,
     Series,
     Paren(Paren),
 }
 
-pub fn tokenize(input: &str) -> Result<Vec<Token>> {
+pub fn tokenize(input: &str) -> Result<Vec<Token<'_>>> {
     let mut chars = input.char_indices().peekable();
     let mut tokens = Vec::new();
     while let Some(&(_, c)) = chars.peek() {
@@ -43,15 +45,42 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>> {
                     _ => bail!("expected '//'"),
                 }
             }
-            'i' | 'j' => {
+            '=' => {
+                tokens.push(Token::Assign);
                 chars.next();
-                tokens.push(Token::Number(Complex::new(0.0, 1.0)));
+            }
+            c if c.is_ascii_alphabetic() || c == '_' => {
+                tokens.push(scan_ident(input, &mut chars));
             }
             '0'..='9' | '-' => tokens.push(Token::Number(scan_number(input, &mut chars)?)),
             _ => bail!("unknown token {c}"),
         }
     }
     Ok(tokens)
+}
+
+fn scan_ident<'a>(
+    input: &'a str,
+    chars: &mut std::iter::Peekable<std::str::CharIndices<'a>>,
+) -> Token<'a> {
+    let start = match chars.peek() {
+        Some(&(i, _)) => i,
+        None => return Token::Ident(""),
+    };
+    let mut end = start;
+    while let Some(&(idx, c)) = chars.peek() {
+        if c.is_ascii_alphanumeric() || c == '_' {
+            end = idx + c.len_utf8();
+            chars.next();
+        } else {
+            break;
+        }
+    }
+    // A lone `i` or `j` is the imaginary unit; anything longer is a name.
+    match &input[start..end] {
+        "i" | "j" => Token::Number(Complex::new(0.0, 1.0)),
+        name => Token::Ident(name),
+    }
 }
 
 fn scan_number(
@@ -134,7 +163,7 @@ fn scan_number(
 mod test {
     use super::*;
 
-    fn num(re: f64) -> Token {
+    fn num(re: f64) -> Token<'static> {
         Token::Number(re.into())
     }
 
@@ -199,7 +228,7 @@ mod test {
         );
     }
 
-    fn im(re: f64, im: f64) -> Token {
+    fn im(re: f64, im: f64) -> Token<'static> {
         Token::Number(Complex::new(re, im))
     }
 
@@ -264,8 +293,39 @@ mod test {
     }
 
     #[test]
+    fn test_identifiers_and_assign() {
+        assert_eq!(
+            tokenize("r1").as_deref().unwrap(),
+            [Token::Ident("r1")].as_slice()
+        );
+        assert_eq!(
+            tokenize("x = 4").as_deref().unwrap(),
+            [Token::Ident("x"), Token::Assign, num(4.0)].as_slice()
+        );
+        assert_eq!(
+            tokenize("input//3k").as_deref().unwrap(),
+            [Token::Ident("input"), Token::Parallel, num(3000.0)].as_slice()
+        );
+    }
+
+    #[test]
+    fn test_imaginary_vs_identifier() {
+        // a lone `i`/`j` stays the imaginary unit, longer runs are names
+        assert_eq!(tokenize("i").as_deref().unwrap(), [im(0.0, 1.0)].as_slice());
+        assert_eq!(tokenize("j").as_deref().unwrap(), [im(0.0, 1.0)].as_slice());
+        assert_eq!(
+            tokenize("i2").as_deref().unwrap(),
+            [Token::Ident("i2")].as_slice()
+        );
+        assert_eq!(
+            tokenize("ij").as_deref().unwrap(),
+            [Token::Ident("ij")].as_slice()
+        );
+    }
+
+    #[test]
     fn test_rejects() {
-        for bad in ["4..", "..", "4-", "--4", "foo", "/", "4 / 3", "-.5", "9e3"] {
+        for bad in ["4..", "..", "4-", "--4", "/", "4 / 3", "-.5"] {
             assert!(tokenize(bad).is_err(), "should reject {bad}");
         }
     }
