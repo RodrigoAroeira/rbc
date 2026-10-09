@@ -36,15 +36,16 @@ shows a live preview of the answer as you type.
 
 ## Syntax
 
-| Input        | Meaning                                            |
-| ------------ | -------------------------------------------------- |
-| `+`          | series: `a + b` = `a + b`                          |
-| `//`         | parallel: `a // b` = `1 / (1/a + 1/b)`             |
-| `(` `)`      | grouping                                           |
-| `k`, `K`     | ×1000 (e.g. `4.7k` → 4700)                         |
-| `M`          | ×1,000,000 (e.g. `1M` → 1000000)                   |
-| `m`          | ×0.001 (e.g. `4.7m` → 0.0047)                      |
-| `i`, `j`     | imaginary unit (e.g. `3j`, `4.7kj`, or bare `i`)   |
+| Input         | Meaning                                          |
+| ------------- | ------------------------------------------------ |
+| `+`           | series: `a + b` = `a + b`                        |
+| `//`          | parallel: `a // b` = `1 / (1/a + 1/b)`           |
+| `(` `)`       | grouping                                         |
+| `name = expr` | assign: store `expr` under `name`                |
+| `k`, `K`      | ×1000 (e.g. `4.7k` → 4700)                       |
+| `M`           | ×1,000,000 (e.g. `1M` → 1000000)                 |
+| `m`           | ×0.001 (e.g. `4.7m` → 0.0047)                    |
+| `i`, `j`      | imaginary unit (e.g. `3j`, `4.7kj`, or bare `i`) |
 
 Operators share the same precedence and evaluate **left to right**, so
 `4 // 3 + 5` means `(4 // 3) + 5` and `4 + 3 // 2` means `(4 + 3) // 2`.
@@ -61,6 +62,34 @@ $ rbc "4 // 3j"
 
 A parallel branch containing `0` yields `0` (an open branch shorts the pair).
 
+## Variables
+
+Assign a name to reuse a value on later lines:
+
+```sh
+> r1 = 4.7k
+4700 Ω
+> r1 // 3k
+1831.1688311688315 Ω
+```
+
+A name is any identifier starting with a letter or `_` and continuing with
+letters, digits, or `_`. Bare `i` and `j` remain the imaginary unit, so they
+cannot be names (`i2` and `input`, however, are fine). The suffixes `k`, `M`,
+and `m` only scale a number when they directly follow one, so `m` alone is a
+valid name while `4m` is `0.004`. Assignments are understood only at the top
+level, and chains such as `x = y = 4` are not supported.
+
+The result of every evaluated line is also stored under `ans` and `_`, so you
+can chain calculations:
+
+```sh
+> 4.7k // 3k
+1831.1688311688315 Ω
+> ans + 1k
+2831.1688311688315 Ω
+```
+
 ## Development
 
 ```sh
@@ -68,7 +97,8 @@ cargo test
 ```
 
 The test suite covers tokenizing, suffix and imaginary parsing, operator
-precedence, parentheses, error cases, and complex arithmetic.
+precedence, parentheses, assignments and variables, error cases, and complex
+arithmetic.
 
 ## License
 
