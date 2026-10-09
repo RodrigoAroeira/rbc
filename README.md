@@ -80,6 +80,16 @@ and `m` only scale a number when they directly follow one, so `m` alone is a
 valid name while `4m` is `0.004`. Assignments are understood only at the top
 level, and chains such as `x = y = 4` are not supported.
 
+The result of every evaluated line is also stored under `ans` and `_`, so you
+can chain calculations:
+
+```sh
+> 4.7k // 3k
+1831.1688311688315 Ω
+> ans + 1k
+2831.1688311688315 Ω
+```
+
 ## Development
 
 ```sh
