@@ -94,6 +94,8 @@ fn eval_with<'a>(
 /// Evaluates `line`, storing a top-level assignment into `vars` when provided.
 /// Without `vars`, an assignment still evaluates to its right-hand side but is
 /// not remembered.
+///
+/// The result is always stored under `ans` and `_` so later lines can reuse it.
 pub fn eval(line: &str, vars: Option<&mut HashMap<String, Complex>>) -> Result<Complex> {
     match vars {
         Some(env) => {
@@ -101,6 +103,8 @@ pub fn eval(line: &str, vars: Option<&mut HashMap<String, Complex>>) -> Result<C
             if let Some(name) = name {
                 env.insert(name.to_string(), value);
             }
+            env.insert("ans".to_string(), value);
+            env.insert("_".to_string(), value);
             Ok(value)
         }
         None => {
@@ -216,6 +220,24 @@ mod test {
 
         // without a map, an assignment evaluates but is not stored
         assert_res(eval("x = 4", None), 4.0);
+    }
+
+    #[test]
+    fn test_last_answer_aliases() {
+        let mut vars = HashMap::new();
+        assert_res(eval("4 + 3", Some(&mut vars)), 7.0);
+        assert_eq!(vars.get("ans"), Some(&Complex::from(7.0)));
+        assert_eq!(vars.get("_"), Some(&Complex::from(7.0)));
+
+        // the aliases are available on later lines
+        assert_res(eval("ans + 1", Some(&mut vars)), 8.0);
+        assert_eq!(vars.get("_"), Some(&Complex::from(8.0)));
+        assert_res(eval("_ + 1", Some(&mut vars)), 9.0);
+
+        // an assignment also updates the aliases
+        assert_res(eval("r1 = 100", Some(&mut vars)), 100.0);
+        assert_eq!(vars.get("ans"), Some(&Complex::from(100.0)));
+        assert_eq!(vars.get("_"), Some(&Complex::from(100.0)));
     }
 
     #[test]
